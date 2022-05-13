@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:storage_info/storage_info.dart';
+import 'package:tppm/Screens/StartScreen/components/up_clipper.dart';
+import 'package:tppm/Screens/StartScreen/components/favorites.dart';
 import 'memory_chart.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
+int enabledButton = 0;
+
 class Background extends StatefulWidget {
-  final MemoryChart chart;
-  const Background({Key? key, required this.chart}) : super(key: key);
+  const Background({Key? key}) : super(key: key);
 
   @override
   _BackgroundState createState() => _BackgroundState();
@@ -18,26 +21,36 @@ class _BackgroundState extends State<Background> {
     return SizedBox(
         height: size.height,
         width: double.infinity,
-        child: Stack(
-          alignment: Alignment.center,
+        child: Column(
           children: <Widget>[
-            UpCard(size: size, chart: widget.chart),
-            Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const <Widget>[
-                        Text("salutare"),
-                      ]),
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const <Widget>[
-                        Text("salutare2"),
-                      ]),
-                ])
+            Align(alignment: Alignment.topLeft, child: UpCard(size: size)),
+            Expanded(
+              child: StartBody(size: size),
+            )
           ],
         ));
+  }
+}
+
+class StartBody extends StatefulWidget {
+  const StartBody({
+    Key? key,
+    required this.size,
+  }) : super(key: key);
+
+  final Size size;
+
+  @override
+  State<StartBody> createState() => _StartBodyState();
+}
+
+class _StartBodyState extends State<StartBody> {
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(horizontal: widget.size.width * 0.08),
+      child: Column(children: [Favorites(height: widget.size.height)]),
+    );
   }
 }
 
@@ -48,23 +61,20 @@ class UpCard extends StatelessWidget {
   UpCard({
     Key? key,
     required this.size,
-    required this.chart,
-  })  : height = size.height * 0.25,
-        width = size.width * 0.95,
+  })  : height = size.height * 0.32,
+        width = size.width,
         super(key: key);
 
   final Size size;
-  final MemoryChart chart;
-  GlobalKey<_CarouselInfoState> _carousel = GlobalKey();
+  final GlobalKey<_CarouselInfoState> _carousel = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      child: SizedBox(
-          width: width,
-          height: height,
+    return SizedBox(
+        width: width,
+        height: height,
+        child: ClipPath(
+          clipper: HeaderClipper(45),
           child: Card(
             margin: EdgeInsets.zero,
             child: Column(children: <Widget>[
@@ -78,14 +88,16 @@ class UpCard extends StatelessWidget {
                       child: RichText(
                           text: TextSpan(
                               style: TextStyle(
-                                  letterSpacing: 1.1,
+                                  letterSpacing: 0.42,
                                   fontSize: size.width * 0.065,
                                   color: Colors.white),
                               children: const <TextSpan>[
                             TextSpan(
                                 text: "File ",
                                 style: TextStyle(fontWeight: FontWeight.bold)),
-                            TextSpan(text: "Manager")
+                            TextSpan(
+                                text: "Manager",
+                                style: TextStyle(letterSpacing: 0.42))
                           ]))),
                   Container(
                       margin: EdgeInsets.only(right: size.width * 0.04),
@@ -102,16 +114,11 @@ class UpCard extends StatelessWidget {
                       ))
                 ],
               ),
-              Expanded(
-                child: SizedBox(
-                  width: width,
-                  child: CarouselInfo(
-                      key: _carousel,
-                      height: height,
-                      size: size,
-                      chart: chart,
-                      width: width),
-                ),
+              SizedBox(
+                width: width,
+                height: height * 0.45,
+                child: CarouselInfo(
+                    key: _carousel, height: height, size: size, width: width),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -144,8 +151,8 @@ class UpCard extends StatelessWidget {
             shape: const RoundedRectangleBorder(
                 borderRadius:
                     BorderRadius.only(bottomRight: Radius.circular(40))),
-          )),
-    );
+          ),
+        ));
   }
 
   void switchMemory(int i) {
@@ -158,13 +165,11 @@ class CarouselInfo extends StatefulWidget {
     Key? key,
     required this.height,
     required this.size,
-    required this.chart,
     required this.width,
   }) : super(key: key);
 
   final double height;
   final Size size;
-  final MemoryChart chart;
   final double width;
 
   @override
@@ -188,6 +193,7 @@ class _CarouselInfoState extends State<CarouselInfo> {
     return CarouselSlider(
         carouselController: buttonCarouselController,
         options: CarouselOptions(
+            viewportFraction: 1,
             onPageChanged: changeVisibility,
             enlargeCenterPage: true,
             enableInfiniteScroll: false),
@@ -197,7 +203,7 @@ class _CarouselInfoState extends State<CarouselInfo> {
             child: MemoryArea(
                 height: widget.height,
                 size: widget.size,
-                chart: widget.chart,
+                chart: const MemoryChart(type: "Internal"),
                 width: widget.width,
                 type: "Internal"),
           ),
@@ -206,7 +212,7 @@ class _CarouselInfoState extends State<CarouselInfo> {
             child: MemoryArea(
                 height: widget.height,
                 size: widget.size,
-                chart: widget.chart,
+                chart: const MemoryChart(type: "External"),
                 width: widget.width,
                 type: "External"),
           ),
@@ -233,6 +239,8 @@ class MemoryArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.max,
       children: [
         Container(
           height: height * 0.5,
@@ -241,7 +249,13 @@ class MemoryArea extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           decoration: const BoxDecoration(),
         ),
-        UsedInfo(size: size, height: height, width: width, type: type)
+        Flexible(
+          child: Padding(
+            padding: EdgeInsets.only(left: width * 0.05),
+            child:
+                UsedInfo(size: size, height: height, width: width, type: type),
+          ),
+        )
       ],
     );
   }
@@ -286,53 +300,48 @@ class _UsedInfoState extends State<UsedInfo> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(left: widget.size.width * 0.05),
-      child: SizedBox(
-        height: widget.height * 0.45,
-        child: IntrinsicWidth(
-          child: Column(
-            children: [
-              SizedBox(
-                height: widget.height * 0.45 * 0.5,
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Text("Used Storage",
-                      style: TextStyle(
-                          fontSize: widget.size.width * 0.045,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white),
-                      textAlign: TextAlign.left),
-                ),
-              ),
-              SizedBox(
-                height: widget.height * 0.45 * 0.5,
-                // width: widget.width * 0.5,
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: RichText(
-                      text: TextSpan(
-                          style: TextStyle(
-                              fontSize: widget.size.width * 0.05,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold),
-                          children: <TextSpan>[
-                        TextSpan(
-                            text: used.toString() + "GB",
-                            style: TextStyle(
-                                color: used < total / 2
-                                    ? Colors.green
-                                    : Colors.red)),
-                        const TextSpan(text: " / "),
-                        TextSpan(
-                          text: total.toString() + "GB",
-                        )
-                      ])),
-                ),
-              )
-            ],
+    return SizedBox(
+      height: widget.height * 0.45,
+      width: widget.width * 0.5,
+      child: Column(
+        children: [
+          SizedBox(
+            height: widget.height * 0.45 * 0.5,
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Text("Used Storage",
+                  style: TextStyle(
+                      fontSize: widget.size.width * 0.045,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
+                  textAlign: TextAlign.left),
+            ),
           ),
-        ),
+          SizedBox(
+            height: widget.height * 0.45 * 0.5,
+            // width: widget.width * 0.5,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: RichText(
+                  text: TextSpan(
+                      style: TextStyle(
+                          fontSize: widget.size.width * 0.05,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold),
+                      children: <TextSpan>[
+                    TextSpan(
+                        text: used.toString() + "GB",
+                        style: TextStyle(
+                            color:
+                                used < total / 2 ? Colors.green : Colors.red)),
+                    const TextSpan(text: " / "),
+                    TextSpan(
+                      text: total.toString() + "GB",
+                    )
+                  ])),
+            ),
+          )
+        ],
       ),
     );
   }

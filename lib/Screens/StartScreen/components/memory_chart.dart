@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 
 class MemoryChart extends StatefulWidget {
-  const MemoryChart({Key? key}) : super(key: key);
+  const MemoryChart({Key? key, required this.type}) : super(key: key);
+  final String type;
 
   @override
   _MemoryChartState createState() => _MemoryChartState();
@@ -32,10 +33,17 @@ class _MemoryChartState extends State<MemoryChart> {
   void initState() {
     super.initState();
     WidgetsBinding.instance!.addPostFrameCallback((_) async {
-      dataMap = <String, double>{
-        'Used': await StorageInfo.getStorageUsedSpaceInGB,
-        'Free': await StorageInfo.getStorageFreeSpaceInGB,
-      };
+      if (widget.type == "Internal") {
+        dataMap = <String, double>{
+          'Used': await StorageInfo.getStorageUsedSpaceInGB,
+          'Free': await StorageInfo.getStorageFreeSpaceInGB,
+        };
+      } else {
+        dataMap = <String, double>{
+          'Used': await StorageInfo.getExternalStorageUsedSpaceInGB,
+          'Free': await StorageInfo.getExternalStorageFreeSpaceInGB,
+        };
+      }
       setState(() {});
     });
   }

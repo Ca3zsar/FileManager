@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:tppm/Screens/StartScreen/components/body.dart';
+import 'package:tppm/Screens/StartScreen/components/entire_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key, required this.title}) : super(key: key);
@@ -15,7 +15,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: MainBody()// This trailing comma makes auto-formatting nicer for build methods.
-    );
+        body:
+            MainBody() // This trailing comma makes auto-formatting nicer for build methods.
+        );
   }
 }
