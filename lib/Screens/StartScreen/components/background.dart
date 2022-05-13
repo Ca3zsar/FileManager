@@ -4,6 +4,8 @@ import 'package:tppm/Screens/StartScreen/components/up_clipper.dart';
 import 'package:tppm/Screens/StartScreen/components/favorites.dart';
 import 'memory_chart.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:tppm/Screens/StartScreen/data/constants.dart';
+import 'storage_type.dart';
 
 int enabledButton = 0;
 
@@ -49,7 +51,20 @@ class _StartBodyState extends State<StartBody> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(horizontal: widget.size.width * 0.08),
-      child: Column(children: [Favorites(height: widget.size.height)]),
+      child: Column(children: [
+        Favorites(height: widget.size.height),
+        MediaQuery.removeViewPadding(
+            context: context,
+            removeTop: true,
+            child: ListView.builder(
+                itemCount: 2,
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                itemBuilder: (BuildContext context, int index) {
+                  return StorageTypeWidget(storageTypeList[index],
+                      storagePaths[index], storageIcons[index]);
+                }))
+      ]),
     );
   }
 }

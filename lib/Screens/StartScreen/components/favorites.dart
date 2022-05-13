@@ -114,7 +114,7 @@ class FavoriteItem extends StatelessWidget {
       title: Text(
         title,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
+        style: const TextStyle(
           color: Colors.black,
           fontSize: 14,
           fontFamily: "Gilroy",
