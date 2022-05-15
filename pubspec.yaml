@@ -41,6 +41,8 @@ dependencies:
   intro_slider: ^3.0.4
   carousel_slider: ^4.1.1
   gap: ^2.0.0
+  path_provider: ^2.0.10
+  permission_handler: ^9.2.0
 
 dev_dependencies:
   flutter_test:

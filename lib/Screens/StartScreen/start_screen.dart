@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'package:tppm/Screens/StartScreen/components/entire_screen.dart';
 
@@ -12,6 +13,24 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  void requestPermission() async {
+    var statusInternal = await Permission.storage.status;
+    if (!statusInternal.isGranted) {
+      await Permission.storage.request();
+    }
+
+    var statusExternal = await Permission.manageExternalStorage.status;
+    if (!statusExternal.isGranted) {
+      await Permission.manageExternalStorage.request();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    requestPermission();
+  }
+
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
