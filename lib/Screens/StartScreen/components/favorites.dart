@@ -104,9 +104,7 @@ class FavoriteItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
         child: ListTile(
-      onTap: () {
-        print("aici sunt");
-      },
+      onTap: () {},
       // minVerticalPadding: 1,
       dense: true,
       visualDensity: VisualDensity.compact,

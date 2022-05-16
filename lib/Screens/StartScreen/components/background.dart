@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:storage_info/storage_info.dart';
 import 'package:tppm/Screens/StartScreen/components/up_clipper.dart';
@@ -120,10 +122,14 @@ class UpCard extends StatelessWidget {
                         splashColor: Colors.transparent,
                         highlightColor: Colors.transparent,
                         tooltip: "Settings",
-                        icon: Image.asset(
-                          "assets/images/settings.png",
-                          width: size.width * 0.07,
-                          isAntiAlias: true,
+                        icon: Transform.rotate(
+                          angle: -pi / 2,
+                          child: Image.asset(
+                            "assets/images/settings.png",
+                            width: size.width * 0.06,
+                            isAntiAlias: true,
+                            color: Colors.white,
+                          ),
                         ),
                         onPressed: () {},
                       ))
@@ -298,6 +304,10 @@ class _UsedInfoState extends State<UsedInfo> {
   double used = 0;
   double total = 0;
 
+  void setStateIfMounted(f) {
+    if (mounted) setState(f);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -309,7 +319,7 @@ class _UsedInfoState extends State<UsedInfo> {
         used = await StorageInfo.getExternalStorageUsedSpaceInGB;
         total = await StorageInfo.getExternalStorageTotalSpaceInGB;
       }
-      setState(() {});
+      setStateIfMounted(() {});
     });
   }
 

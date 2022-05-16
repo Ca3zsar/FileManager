@@ -29,6 +29,10 @@ class _MemoryChartState extends State<MemoryChart> {
 
   final ChartType _chartType = ChartType.ring;
 
+  void setStateIfMounted(f) {
+    if (mounted) setState(f);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +48,7 @@ class _MemoryChartState extends State<MemoryChart> {
           'Free': await StorageInfo.getExternalStorageFreeSpaceInGB,
         };
       }
-      setState(() {});
+      setStateIfMounted(() {});
     });
   }
 
