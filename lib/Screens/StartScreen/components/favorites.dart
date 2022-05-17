@@ -1,4 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:tppm/utils/favorites_manager.dart';
 
 class Favorites extends StatefulWidget {
   final double height;
@@ -10,13 +15,41 @@ class Favorites extends StatefulWidget {
 }
 
 class _FavoritesState extends State<Favorites> {
-  final List<String> favorites = ["Folder1", "File1", "Folder2", "Folder3"];
-  final List<String> paths = ["path1", "path/subpath/file1", "path2", "path3"];
+  final List<String> favorites = [];
+  final List<String> paths = [];
 
   void deleteFavorite(int index) {
     setState(() {
       favorites.removeAt(index);
+      paths.removeAt(index);
+      writeFavorites(paths);
     });
+  }
+
+  Future<void> loadFavoritesIntoUI() async {
+    final favoritesList = await loadFavorites();
+    setState(() {
+      favorites
+        ..clear()
+        ..addAll(favoritesList.map((e) => e.split('/').last));
+      paths
+        ..clear()
+        ..addAll(favoritesList);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Timer _timer =
+        Timer.periodic(const Duration(milliseconds: 1000), (Timer timer) {
+      setState(() => {loadFavoritesIntoUI()});
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -121,7 +154,8 @@ class FavoriteItem extends StatelessWidget {
       ),
       subtitle: Text(path,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontFamily: "Gilroy", fontSize: 10)),
+          style: const TextStyle(
+              fontFamily: "Gilroy", fontSize: 10, fontWeight: FontWeight.w600)),
       trailing: IconButton(
           onPressed: () {
             callback(index);

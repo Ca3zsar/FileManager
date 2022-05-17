@@ -5,11 +5,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:tppm/utils/favorites_manager.dart';
 
-int selectedFiles = 0;
+List<int> selectedFiles = [];
 List<String> currentPath = [];
 List<FileSystemEntity> files = [];
 bool filesLoaded = false;
+bool notFinishedLoading = false;
 
 class FileList extends StatefulWidget {
   const FileList();
@@ -19,11 +21,16 @@ class FileList extends StatefulWidget {
 }
 
 class _FileListState extends State<FileList> {
-  static String type = '';
+  String type = '';
   late Timer timer;
   bool isLoading = true;
 
-  static Future<Directory> getExternalSdCardPath() async {
+  Future<void> saveFavorites() async {
+    final favorites = selectedFiles.map((e) => files[e].path).toList();
+    addNewFavorites(favorites);
+  }
+
+  Future<Directory> getExternalSdCardPath() async {
     List<Directory>? extDirectories = await getExternalStorageDirectories();
     List<String>? dirs = extDirectories![1].toString().split('/');
 
@@ -32,10 +39,10 @@ class _FileListState extends State<FileList> {
     return Directory(rebuiltPath);
   }
 
-  static Future<Directory> getInternalStoragePath() async {
+  Future<Directory> getInternalStoragePath() async {
     final directory = await getExternalStorageDirectory();
     List<String>? dirs = directory?.path.split('/');
-    String rebuiltPath = '/' + dirs![1] + '/' + dirs[2] + '/' + dirs[3] + '/';
+    String rebuiltPath = '/' + dirs![1] + '/' + dirs[2] + '/' + dirs[3];
     return Directory(rebuiltPath);
   }
 
@@ -43,20 +50,49 @@ class _FileListState extends State<FileList> {
     final icon = files[index].statSync().type == FileSystemEntityType.directory
         ? Image.asset('assets/images/folder.png')
         : Image.asset('assets/images/file.png');
+
     return ListTile(
+      selected: selectedFiles.contains(index),
       leading: icon,
-      title: Text(files[index].path.split('/').last),
+      selectedColor: Colors.black,
+      selectedTileColor: Colors.amber,
+      title: Text(
+        files[index].path.split('/').last,
+        style: const TextStyle(
+            color: Colors.black,
+            fontFamily: "Gilroy",
+            fontWeight: FontWeight.w500),
+      ),
+      onLongPress: () {
+        setState(() {
+          if (selectedFiles.contains(index)) {
+            selectedFiles.remove(index);
+          } else {
+            selectedFiles.add(index);
+          }
+        });
+      },
       onTap: () {
         setState(() {
-          if (files[index].statSync().type == FileSystemEntityType.directory) {
-            addToPath(files[index].path.split('/').last);
+          if (selectedFiles.contains(index)) {
+            selectedFiles.remove(index);
+          } else {
+            if (selectedFiles.isNotEmpty && !selectedFiles.contains(index)) {
+              selectedFiles.add(index);
+            }
+
+            if (files[index].statSync().type ==
+                    FileSystemEntityType.directory &&
+                selectedFiles.isEmpty) {
+              addToPath(files[index].path.split('/').last);
+            }
           }
         });
       },
     );
   }
 
-  static void getInitialPath() async {
+  void getInitialPath() async {
     Future<Directory> Function() function;
     if (currentPath.isEmpty) {
       if (type == 'Internal') {
@@ -65,8 +101,7 @@ class _FileListState extends State<FileList> {
         function = getExternalSdCardPath;
       }
       final newPathPart = await function();
-      currentPath
-          .add(newPathPart.path.substring(0, newPathPart.path.length - 1));
+      currentPath.add(newPathPart.path);
     }
   }
 
@@ -77,7 +112,7 @@ class _FileListState extends State<FileList> {
     isLoading = true;
   }
 
-  static void updateFiles() {
+  void updateFiles() {
     if (currentPath.isEmpty) {
       getInitialPath();
     } else {
@@ -92,7 +127,6 @@ class _FileListState extends State<FileList> {
   }
 
   Widget getFileBody(Size size) {
-    print("getFileBody : ${isLoading} ${filesLoaded}");
     if (isLoading) {
       return LoadingAnimationWidget.waveDots(
         color: const Color.fromARGB(255, 0, 0, 26),
@@ -100,15 +134,14 @@ class _FileListState extends State<FileList> {
       );
     } else {
       if (files.isNotEmpty) {
+        ListView childToReturn = ListView.builder(
+            itemCount: files.length,
+            itemBuilder: (BuildContext context, int index) {
+              return generateFileTile(index);
+            });
+
         return Stack(
-          children: [
-            ListView.builder(
-                itemCount: files.length,
-                itemBuilder: (BuildContext context, int index) {
-                  return generateFileTile(index);
-                }),
-            DownBar(size: size)
-          ],
+          children: [childToReturn, DownBar(size: size)],
         );
       } else {
         return const Center(
@@ -124,7 +157,9 @@ class _FileListState extends State<FileList> {
 
   @override
   void initState() {
+    selectedFiles.clear();
     currentPath.clear();
+    files.clear();
     filesLoaded = false;
     super.initState();
     timer =
@@ -155,7 +190,9 @@ class _FileListState extends State<FileList> {
         child: SafeArea(
             child: Column(
       children: <Widget>[
-        Align(alignment: Alignment.topLeft, child: UpBar(context)),
+        Align(
+            alignment: Alignment.topLeft,
+            child: UpBar(context, updateFiles, saveFavorites)),
         Expanded(child: getFileBody(size))
       ],
     )));
@@ -173,7 +210,7 @@ class DownBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Visibility(
-      visible: selectedFiles > 0,
+      visible: selectedFiles.isNotEmpty,
       child: Positioned(
         bottom: 0,
         left: 0,
@@ -192,7 +229,8 @@ class DownBar extends StatelessWidget {
 }
 
 class UpBar extends StatefulWidget {
-  const UpBar(this.context);
+  final Function callback, saveFavorites;
+  const UpBar(this.context, this.callback, this.saveFavorites);
 
   final BuildContext context;
 
@@ -224,7 +262,9 @@ class _UpBarState extends State<UpBar> {
     ];
 
     List<dynamic> allFolders = [type];
-    allFolders.addAll(folders);
+    if (currentPath.length > 1) {
+      allFolders.addAll(currentPath.sublist(1));
+    }
 
     path.add(Expanded(
         child: ListView.builder(
@@ -260,7 +300,7 @@ class _UpBarState extends State<UpBar> {
       Navigator.pop(context);
     } else {
       currentPath.removeLast();
-      _FileListState.updateFiles();
+      widget.callback();
     }
   }
 
@@ -297,8 +337,8 @@ class _UpBarState extends State<UpBar> {
                       },
                     )),
                 Visibility(
-                  visible: selectedFiles > 0,
-                  child: Text("$selectedFiles Selected file(s)",
+                  visible: selectedFiles.isNotEmpty,
+                  child: Text("${selectedFiles.length} Selected file(s)",
                       style: const TextStyle(
                         color: Colors.white,
                         fontFamily: "Gilroy",
@@ -308,9 +348,11 @@ class _UpBarState extends State<UpBar> {
                 ),
                 const Spacer(),
                 Visibility(
-                  visible: selectedFiles > 0,
+                  visible: selectedFiles.isNotEmpty,
                   child: IconButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        widget.saveFavorites();
+                      },
                       icon: const Icon(Icons.favorite_outline_sharp,
                           color: Colors.white)),
                 ),
