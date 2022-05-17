@@ -7,6 +7,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 int selectedFiles = 0;
+List<String> currentPath = [];
+List<FileSystemEntity> files = [];
+bool filesLoaded = false;
 
 class FileList extends StatefulWidget {
   const FileList();
@@ -16,12 +19,11 @@ class FileList extends StatefulWidget {
 }
 
 class _FileListState extends State<FileList> {
-  String type = '';
-  List<FileSystemEntity> files = [];
+  static String type = '';
   late Timer timer;
   bool isLoading = true;
 
-  Future<Directory> getExternalSdCardPath() async {
+  static Future<Directory> getExternalSdCardPath() async {
     List<Directory>? extDirectories = await getExternalStorageDirectories();
     List<String>? dirs = extDirectories![1].toString().split('/');
 
@@ -30,7 +32,7 @@ class _FileListState extends State<FileList> {
     return Directory(rebuiltPath);
   }
 
-  Future<Directory> getInternalStoragePath() async {
+  static Future<Directory> getInternalStoragePath() async {
     final directory = await getExternalStorageDirectory();
     List<String>? dirs = directory?.path.split('/');
     String rebuiltPath = '/' + dirs![1] + '/' + dirs[2] + '/' + dirs[3] + '/';
@@ -45,37 +47,95 @@ class _FileListState extends State<FileList> {
       leading: icon,
       title: Text(files[index].path.split('/').last),
       onTap: () {
-        Navigator.pushNamed(context, '/filelist', arguments: files[index].path);
+        setState(() {
+          if (files[index].statSync().type == FileSystemEntityType.directory) {
+            addToPath(files[index].path.split('/').last);
+          }
+        });
       },
     );
   }
 
-  void updateFiles() {
+  static void getInitialPath() async {
     Future<Directory> Function() function;
-    if (type == 'Internal') {
-      function = getInternalStoragePath;
-    } else {
-      function = getExternalSdCardPath;
+    if (currentPath.isEmpty) {
+      if (type == 'Internal') {
+        function = getInternalStoragePath;
+      } else {
+        function = getExternalSdCardPath;
+      }
+      final newPathPart = await function();
+      currentPath
+          .add(newPathPart.path.substring(0, newPathPart.path.length - 1));
     }
+  }
 
-    function().then((directory) {
-      files = directory.listSync().toList();
-      print(files.length);
-    });
+  void addToPath(String newPath) {
+    currentPath.add(newPath);
+    files.clear();
+    filesLoaded = false;
+    isLoading = true;
+  }
+
+  static void updateFiles() {
+    if (currentPath.isEmpty) {
+      getInitialPath();
+    } else {
+      try {
+        final path = currentPath.join('/');
+        files = Directory(path).listSync();
+        filesLoaded = true;
+      } catch (e) {
+        filesLoaded = true;
+      }
+    }
+  }
+
+  Widget getFileBody(Size size) {
+    print("getFileBody : ${isLoading} ${filesLoaded}");
+    if (isLoading) {
+      return LoadingAnimationWidget.waveDots(
+        color: const Color.fromARGB(255, 0, 0, 26),
+        size: 150,
+      );
+    } else {
+      if (files.isNotEmpty) {
+        return Stack(
+          children: [
+            ListView.builder(
+                itemCount: files.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return generateFileTile(index);
+                }),
+            DownBar(size: size)
+          ],
+        );
+      } else {
+        return const Center(
+          child: Text(
+            'No files found',
+            style: TextStyle(
+                fontSize: 40, color: Colors.black, fontFamily: "Gilroy"),
+          ),
+        );
+      }
+    }
   }
 
   @override
   void initState() {
+    currentPath.clear();
+    filesLoaded = false;
     super.initState();
     timer =
         Timer.periodic(const Duration(milliseconds: 500), (Timer timer) async {
       setState(() {
-        if (files.isEmpty) {
+        if (files.isEmpty && !filesLoaded) {
           type = ModalRoute.of(context)!.settings.arguments as String;
           updateFiles();
         }
 
-        if (files.isNotEmpty) {
+        if (files.isNotEmpty || filesLoaded) {
           isLoading = false;
         }
       });
@@ -96,22 +156,7 @@ class _FileListState extends State<FileList> {
             child: Column(
       children: <Widget>[
         Align(alignment: Alignment.topLeft, child: UpBar(context)),
-        Expanded(
-            child: isLoading
-                ? LoadingAnimationWidget.waveDots(
-                    color: Color.fromARGB(255, 0, 0, 26),
-                    size: 150,
-                  )
-                : Stack(
-                    children: [
-                      ListView.builder(
-                          itemCount: files.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            return generateFileTile(index);
-                          }),
-                      DownBar(size: size)
-                    ],
-                  ))
+        Expanded(child: getFileBody(size))
       ],
     )));
   }
@@ -210,6 +255,15 @@ class _UpBarState extends State<UpBar> {
     return path;
   }
 
+  void goBack(BuildContext context) {
+    if (currentPath.length == 1) {
+      Navigator.pop(context);
+    } else {
+      currentPath.removeLast();
+      _FileListState.updateFiles();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
@@ -234,14 +288,14 @@ class _UpBarState extends State<UpBar> {
             Row(
               children: <Widget>[
                 Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: IconButton(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: IconButton(
                       icon: const Icon(Icons.arrow_back_rounded,
                           color: Colors.white),
                       onPressed: () {
-                        Navigator.pop(context);
-                      }),
-                ),
+                        goBack(context);
+                      },
+                    )),
                 Visibility(
                   visible: selectedFiles > 0,
                   child: Text("$selectedFiles Selected file(s)",
