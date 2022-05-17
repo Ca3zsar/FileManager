@@ -1,6 +1,12 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+
+int selectedFiles = 0;
 
 class FileList extends StatefulWidget {
   const FileList();
@@ -10,21 +16,133 @@ class FileList extends StatefulWidget {
 }
 
 class _FileListState extends State<FileList> {
+  String type = '';
+  List<FileSystemEntity> files = [];
+  late Timer timer;
+  bool isLoading = true;
+
+  Future<Directory> getExternalSdCardPath() async {
+    List<Directory>? extDirectories = await getExternalStorageDirectories();
+    List<String>? dirs = extDirectories![1].toString().split('/');
+
+    String rebuiltPath = '/' + dirs[1] + '/' + dirs[2] + '/';
+
+    return Directory(rebuiltPath);
+  }
+
+  Future<Directory> getInternalStoragePath() async {
+    final directory = await getExternalStorageDirectory();
+    List<String>? dirs = directory?.path.split('/');
+    String rebuiltPath = '/' + dirs![1] + '/' + dirs[2] + '/' + dirs[3] + '/';
+    return Directory(rebuiltPath);
+  }
+
+  ListTile generateFileTile(int index) {
+    final icon = files[index].statSync().type == FileSystemEntityType.directory
+        ? Image.asset('assets/images/folder.png')
+        : Image.asset('assets/images/file.png');
+    return ListTile(
+      leading: icon,
+      title: Text(files[index].path.split('/').last),
+      onTap: () {
+        Navigator.pushNamed(context, '/filelist', arguments: files[index].path);
+      },
+    );
+  }
+
+  void updateFiles() {
+    Future<Directory> Function() function;
+    if (type == 'Internal') {
+      function = getInternalStoragePath;
+    } else {
+      function = getExternalSdCardPath;
+    }
+
+    function().then((directory) {
+      files = directory.listSync().toList();
+      print(files.length);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    timer =
+        Timer.periodic(const Duration(milliseconds: 500), (Timer timer) async {
+      setState(() {
+        if (files.isEmpty) {
+          type = ModalRoute.of(context)!.settings.arguments as String;
+          updateFiles();
+        }
+
+        if (files.isNotEmpty) {
+          isLoading = false;
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    timer.cancel();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
     return Material(
         child: SafeArea(
             child: Column(
       children: <Widget>[
         Align(alignment: Alignment.topLeft, child: UpBar(context)),
         Expanded(
-            child: ListView.builder(
-                itemCount: 20,
-                itemBuilder: (BuildContext context, int index) {
-                  return ListTile(title: Text(index.toString()));
-                }))
+            child: isLoading
+                ? LoadingAnimationWidget.waveDots(
+                    color: Color.fromARGB(255, 0, 0, 26),
+                    size: 150,
+                  )
+                : Stack(
+                    children: [
+                      ListView.builder(
+                          itemCount: files.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            return generateFileTile(index);
+                          }),
+                      DownBar(size: size)
+                    ],
+                  ))
       ],
     )));
+  }
+}
+
+class DownBar extends StatelessWidget {
+  const DownBar({
+    Key? key,
+    required this.size,
+  }) : super(key: key);
+
+  final Size size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Visibility(
+      visible: selectedFiles > 0,
+      child: Positioned(
+        bottom: 0,
+        left: 0,
+        right: 0,
+        child: Container(
+          height: size.height * 0.07,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          margin: const EdgeInsets.only(top: 10),
+          decoration: const BoxDecoration(
+            color: Color.fromARGB(255, 0, 0, 26),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -38,13 +156,7 @@ class UpBar extends StatefulWidget {
 }
 
 class _UpBarState extends State<UpBar> {
-  List<String> folders = [
-    'Folder 1',
-    'Folder 2',
-    'Folder 3',
-    "Folder 4",
-    "Folder 5"
-  ];
+  List<String> folders = [];
 
   List<Widget> _createPath() {
     final Size size = MediaQuery.of(context).size;
@@ -130,7 +242,24 @@ class _UpBarState extends State<UpBar> {
                         Navigator.pop(context);
                       }),
                 ),
+                Visibility(
+                  visible: selectedFiles > 0,
+                  child: Text("$selectedFiles Selected file(s)",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: "Gilroy",
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      )),
+                ),
                 const Spacer(),
+                Visibility(
+                  visible: selectedFiles > 0,
+                  child: IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.favorite_outline_sharp,
+                          color: Colors.white)),
+                ),
                 IconButton(
                     icon: Transform.rotate(
                       angle: -pi / 2,

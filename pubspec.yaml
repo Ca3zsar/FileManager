@@ -43,6 +43,7 @@ dependencies:
   gap: ^2.0.0
   path_provider: ^2.0.10
   permission_handler: ^9.2.0
+  loading_animation_widget: ^1.2.0+1
 
 dev_dependencies:
   flutter_test:
