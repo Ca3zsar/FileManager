@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:tppm/utils/favorites_manager.dart';
 
 class Favorites extends StatefulWidget {
@@ -17,6 +14,7 @@ class Favorites extends StatefulWidget {
 class _FavoritesState extends State<Favorites> {
   final List<String> favorites = [];
   final List<String> paths = [];
+  Timer? _timer;
 
   void deleteFavorite(int index) {
     setState(() {
@@ -41,8 +39,7 @@ class _FavoritesState extends State<Favorites> {
   @override
   void initState() {
     super.initState();
-    Timer _timer =
-        Timer.periodic(const Duration(milliseconds: 1000), (Timer timer) {
+    _timer = Timer.periodic(const Duration(milliseconds: 1000), (Timer timer) {
       setState(() => {loadFavoritesIntoUI()});
     });
   }
@@ -50,6 +47,7 @@ class _FavoritesState extends State<Favorites> {
   @override
   void dispose() {
     super.dispose();
+    _timer!.cancel();
   }
 
   @override

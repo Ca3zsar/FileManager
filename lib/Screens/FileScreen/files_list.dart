@@ -140,8 +140,8 @@ class _FileListState extends State<FileList> {
               return generateFileTile(index);
             });
 
-        return Stack(
-          children: [childToReturn, DownBar(size: size)],
+        return Column(
+          children: [Expanded(child: childToReturn), DownBar(size: size)],
         );
       } else {
         return const Center(
@@ -211,18 +211,62 @@ class DownBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Visibility(
       visible: selectedFiles.isNotEmpty,
-      child: Positioned(
-        bottom: 0,
-        left: 0,
-        right: 0,
-        child: Container(
-          height: size.height * 0.07,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          margin: const EdgeInsets.only(top: 10),
-          decoration: const BoxDecoration(
-            color: Color.fromARGB(255, 0, 0, 26),
-          ),
+      child: Container(
+        height: size.height * 0.07,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        // margin: const EdgeInsets.only(top: 10),
+        decoration: const BoxDecoration(
+          color: Color.fromARGB(255, 0, 0, 26),
         ),
+        child: Row(
+          children: [
+            DownButton(size: size, text: "move"),
+            DownButton(size: size, text: "copy"),
+            DownButton(size: size, text: "delete"),
+            if (selectedFiles.length == 1)
+              DownButton(size: size, text: "rename"),
+            if (selectedFiles.length == 1 &&
+                files[selectedFiles[0]].path.split('/').last.endsWith(".txt"))
+              DownButton(size: size, text: "edit")
+          ],
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        ),
+      ),
+    );
+  }
+}
+
+class DownButton extends StatelessWidget {
+  const DownButton({Key? key, required this.size, required this.text})
+      : super(key: key);
+
+  final Size size;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+          elevation: 0,
+          primary: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.only(top: 6)),
+      onPressed: () {},
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/images/$text.png',
+            width: size.width * 0.075,
+            color: Colors.white,
+          ),
+          Text("${text[0].toUpperCase()}${text.substring(1)}",
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: "Gilroy",
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600))
+        ],
       ),
     );
   }
