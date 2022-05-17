@@ -13,6 +13,19 @@ List<FileSystemEntity> files = [];
 bool filesLoaded = false;
 bool notFinishedLoading = false;
 
+void deleteFiles() async {
+  List<String> favorites = await loadFavorites();
+  for (int i = 0; i < selectedFiles.length; i++) {
+    if (favorites.contains(files[selectedFiles[i]].path)) {
+      favorites.remove(files[selectedFiles[i]].path);
+    }
+    files[selectedFiles[i]].delete();
+    files.removeAt(selectedFiles[i]);
+  }
+  writeFavorites(favorites);
+  selectedFiles.clear();
+}
+
 class FileList extends StatefulWidget {
   const FileList();
 
@@ -220,14 +233,14 @@ class DownBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            DownButton(size: size, text: "move"),
-            DownButton(size: size, text: "copy"),
-            DownButton(size: size, text: "delete"),
+            DownButton(callback: null, size: size, text: "move"),
+            DownButton(callback: null, size: size, text: "copy"),
+            DownButton(callback: deleteFiles, size: size, text: "delete"),
             if (selectedFiles.length == 1)
-              DownButton(size: size, text: "rename"),
+              DownButton(callback: null, size: size, text: "rename"),
             if (selectedFiles.length == 1 &&
                 files[selectedFiles[0]].path.split('/').last.endsWith(".txt"))
-              DownButton(size: size, text: "edit")
+              DownButton(callback: null, size: size, text: "edit")
           ],
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         ),
@@ -237,9 +250,11 @@ class DownBar extends StatelessWidget {
 }
 
 class DownButton extends StatelessWidget {
-  const DownButton({Key? key, required this.size, required this.text})
+  const DownButton(
+      {Key? key, required this.size, required this.text, this.callback})
       : super(key: key);
 
+  final Function? callback;
   final Size size;
   final String text;
 
@@ -251,7 +266,9 @@ class DownButton extends StatelessWidget {
           primary: Colors.transparent,
           shadowColor: Colors.transparent,
           padding: const EdgeInsets.only(top: 6)),
-      onPressed: () {},
+      onPressed: () {
+        callback!();
+      },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
