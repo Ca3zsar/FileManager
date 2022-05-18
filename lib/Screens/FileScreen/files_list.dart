@@ -280,6 +280,18 @@ class _FileListState extends State<FileList> {
       try {
         final path = currentPath.join('/');
         files = Directory(path).listSync();
+        files
+          ..sort((a, b) {
+            if (a.statSync().type == FileSystemEntityType.directory &&
+                b.statSync().type == FileSystemEntityType.file) {
+              return -1;
+            } else if (a.statSync().type == FileSystemEntityType.file &&
+                b.statSync().type == FileSystemEntityType.directory) {
+              return 1;
+            } else {
+              return a.path.compareTo(b.path);
+            }
+          });
         filesLoaded = true;
       } catch (e) {
         filesLoaded = true;
@@ -596,14 +608,21 @@ class _UpBarState extends State<UpBar> {
             Row(
               children: <Widget>[
                 Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded,
-                          color: Colors.white),
-                      onPressed: () {
-                        goBack(context, widget.callback);
-                      },
-                    )),
+                  padding: const EdgeInsets.only(left: 12),
+                  child: selectedFiles.isEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.arrow_back_rounded,
+                              color: Colors.white),
+                          onPressed: () {
+                            goBack(context, widget.callback);
+                          },
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.white),
+                          onPressed: () {
+                            selectedFiles.clear();
+                          }),
+                ),
                 Visibility(
                   visible: selectedFiles.isNotEmpty,
                   child: Text("${selectedFiles.length} Selected file(s)",
