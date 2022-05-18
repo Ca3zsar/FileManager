@@ -146,6 +146,120 @@ void renameFile(BuildContext context) async {
   }
 }
 
+void createTxtFile(BuildContext context, Function callback) async {
+  final textField = TextEditingController();
+  final fileName = await showDialog(
+      context: context,
+      builder: (context) {
+        return WillPopScope(
+          child: AlertDialog(
+            backgroundColor: const Color.fromARGB(255, 0, 0, 26),
+            title: const Text('Create file',
+                style: TextStyle(
+                    color: Colors.white, fontSize: 20, fontFamily: "Gilroy")),
+            content: TextField(
+                controller: textField,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'File name',
+                ),
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 18, fontFamily: "Gilroy")),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop("");
+                },
+                child: const Text("Cancel",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: "Gilroy")),
+              ),
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(textField.text);
+                  },
+                  child: const Text(
+                    "Create",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: "Gilroy"),
+                  ))
+            ],
+          ),
+          onWillPop: () {
+            Navigator.of(context).pop("");
+            return Future.value(false);
+          },
+        );
+      });
+  if (fileName != '') {
+    final file = File(currentPath.join('/') + "/" + fileName + ".txt");
+    file.createSync();
+    files.add(file);
+    callback();
+  }
+}
+
+void createDirectory(BuildContext context, Function callback) async {
+  final textField = TextEditingController();
+  final directoryName = await showDialog(
+      context: context,
+      builder: (context) {
+        return WillPopScope(
+          child: AlertDialog(
+            backgroundColor: const Color.fromARGB(255, 0, 0, 26),
+            title: const Text('Create directory',
+                style: TextStyle(
+                    color: Colors.white, fontSize: 20, fontFamily: "Gilroy")),
+            content: TextField(
+                controller: textField,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Directory name',
+                ),
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 18, fontFamily: "Gilroy")),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop("");
+                },
+                child: const Text("Cancel",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: "Gilroy")),
+              ),
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(textField.text);
+                  },
+                  child: const Text(
+                    "Create",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: "Gilroy"),
+                  ))
+            ],
+          ),
+          onWillPop: () {
+            Navigator.of(context).pop("");
+            return Future.value(false);
+          },
+        );
+      });
+  if (directoryName != '') {
+    final directory = Directory(currentPath.join('/') + "/" + directoryName);
+    directory.createSync();
+    files.add(directory);
+    callback();
+  }
+}
+
 void copyFiles() async {
   List<String> favorites = await loadFavorites();
   String currentPathString = currentPath.join('/');
@@ -676,6 +790,37 @@ class _UpBarState extends State<UpBar> {
                 ),
                 const Spacer(),
                 Visibility(
+                  visible: selectedFiles.isEmpty && filesToMoveCopy.isEmpty,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        primary: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.only(top: 6)),
+                    onPressed: () {
+                      createTxtFile(context, widget.callback);
+                    },
+                    child: Image.asset('assets/images/new_file.png',
+                        color: Colors.white, width: size.width * 0.06),
+                  ),
+                ),
+                Visibility(
+                    visible: selectedFiles.isEmpty && filesToMoveCopy.isEmpty,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          primary: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.only(top: 6)),
+                      onPressed: () {
+                        createDirectory(context, widget.callback);
+                      },
+                      child: const Icon(
+                        Icons.create_new_folder,
+                        color: Colors.white,
+                      ),
+                    )),
+                Visibility(
                     visible: selectedFiles.isNotEmpty,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -690,7 +835,7 @@ class _UpBarState extends State<UpBar> {
                         Icons.favorite_border_outlined,
                         color: Colors.white,
                       ),
-                    )),
+                    ))
               ],
             ),
             Expanded(
