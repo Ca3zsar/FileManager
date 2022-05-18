@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:storage_info/storage_info.dart';
 import 'package:tppm/Screens/StartScreen/components/up_clipper.dart';

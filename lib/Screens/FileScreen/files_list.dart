@@ -27,15 +27,56 @@ void goBack(BuildContext context, Function callback) {
 }
 
 void deleteFiles(BuildContext context) async {
-  List<String> favorites = await loadFavorites();
-  for (int i = 0; i < selectedFiles.length; i++) {
-    if (favorites.contains(files[selectedFiles[i]].path)) {
-      favorites.remove(files[selectedFiles[i]].path);
+  final confirmation = await showDialog(
+      context: context,
+      builder: (context) {
+        return WillPopScope(
+          child: AlertDialog(
+            backgroundColor: const Color.fromARGB(255, 0, 0, 26),
+            title: const Text('Delete file(s) ?',
+                style: TextStyle(
+                    color: Colors.white, fontSize: 20, fontFamily: "Gilroy")),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(false);
+                },
+                child: const Text("Cancel",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: "Gilroy")),
+              ),
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text(
+                    "Confirm",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: "Gilroy"),
+                  ))
+            ],
+          ),
+          onWillPop: () {
+            Navigator.of(context).pop(false);
+            return Future.value(false);
+          },
+        );
+      });
+  if (confirmation) {
+    List<String> favorites = await loadFavorites();
+    for (int i = 0; i < selectedFiles.length; i++) {
+      if (favorites.contains(files[selectedFiles[i]].path)) {
+        favorites.remove(files[selectedFiles[i]].path);
+      }
+      files[selectedFiles[i]].delete(recursive: true);
+      files.removeAt(selectedFiles[i]);
     }
-    files[selectedFiles[i]].delete(recursive: true);
-    files.removeAt(selectedFiles[i]);
+    writeFavorites(favorites);
   }
-  writeFavorites(favorites);
   selectedFiles.clear();
 }
 
@@ -645,7 +686,7 @@ class _UpBarState extends State<UpBar> {
                       onPressed: () {
                         widget.saveFavorites(context);
                       },
-                      child: Icon(
+                      child: const Icon(
                         Icons.favorite_border_outlined,
                         color: Colors.white,
                       ),
