@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:io/io.dart';
 import 'package:path_provider/path_provider.dart';
@@ -143,7 +142,6 @@ void moveFiles() async {
       File(filesToMoveCopy[i].path).copySync(newPath);
     }
     filesToMoveCopy[i].delete(recursive: true);
-    print("SALUT: " + filesToMoveCopy[i].path);
     if (favorites.contains(currentPathString)) {
       favorites.remove(currentPathString);
       favorites.add(newPath);
@@ -618,27 +616,21 @@ class _UpBarState extends State<UpBar> {
                 ),
                 const Spacer(),
                 Visibility(
-                  visible: selectedFiles.isNotEmpty,
-                  child: IconButton(
+                    visible: selectedFiles.isNotEmpty,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          primary: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.only(top: 6)),
                       onPressed: () {
-                        widget.saveFavorites();
+                        widget.saveFavorites(context);
                       },
-                      icon: const Icon(Icons.favorite_outline_sharp,
-                          color: Colors.white)),
-                ),
-                IconButton(
-                    icon: Transform.rotate(
-                      angle: -pi / 2,
-                      child: Image.asset(
-                        "assets/images/settings.png",
-                        width: size.width * 0.05,
-                        isAntiAlias: true,
+                      child: Icon(
+                        Icons.favorite_border_outlined,
                         color: Colors.white,
                       ),
-                    ),
-                    onPressed: () {
-                      //
-                    }),
+                    )),
               ],
             ),
             Expanded(

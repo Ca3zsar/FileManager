@@ -116,23 +116,6 @@ class UpCard extends StatelessWidget {
                                 text: "Manager",
                                 style: TextStyle(letterSpacing: 0.42))
                           ]))),
-                  Container(
-                      margin: EdgeInsets.only(right: size.width * 0.04),
-                      child: IconButton(
-                        splashColor: Colors.transparent,
-                        highlightColor: Colors.transparent,
-                        tooltip: "Settings",
-                        icon: Transform.rotate(
-                          angle: -pi / 2,
-                          child: Image.asset(
-                            "assets/images/settings.png",
-                            width: size.width * 0.06,
-                            isAntiAlias: true,
-                            color: Colors.white,
-                          ),
-                        ),
-                        onPressed: () {},
-                      ))
                 ],
               ),
               SizedBox(
