@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'package:io/io.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:tppm/utils/favorites_manager.dart';
@@ -10,8 +10,22 @@ import 'package:tppm/utils/favorites_manager.dart';
 List<int> selectedFiles = [];
 List<String> currentPath = [];
 List<FileSystemEntity> files = [];
+List<FileSystemEntity> filesToMoveCopy = [];
+
 bool filesLoaded = false;
 bool notFinishedLoading = false;
+bool copyMode = false;
+bool moveMode = false;
+
+void goBack(BuildContext context, Function callback) {
+  if (currentPath.length == 1) {
+    Navigator.pop(context);
+  } else {
+    currentPath.removeLast();
+    selectedFiles.clear();
+    callback();
+  }
+}
 
 void deleteFiles(BuildContext context) async {
   List<String> favorites = await loadFavorites();
@@ -19,7 +33,7 @@ void deleteFiles(BuildContext context) async {
     if (favorites.contains(files[selectedFiles[i]].path)) {
       favorites.remove(files[selectedFiles[i]].path);
     }
-    files[selectedFiles[i]].delete();
+    files[selectedFiles[i]].delete(recursive: true);
     files.removeAt(selectedFiles[i]);
   }
   writeFavorites(favorites);
@@ -90,6 +104,76 @@ void renameFile(BuildContext context) async {
       writeFavorites(favorites);
     }
   }
+}
+
+void copyFiles() async {
+  List<String> favorites = await loadFavorites();
+  String currentPathString = currentPath.join('/');
+  for (int i = 0; i < filesToMoveCopy.length; i++) {
+    final newPath =
+        currentPathString + "/" + filesToMoveCopy[i].path.split('/').last;
+    if (filesToMoveCopy[i].statSync().type == FileSystemEntityType.directory) {
+      copyPath(filesToMoveCopy[i].path, newPath);
+    } else {
+      File(filesToMoveCopy[i].path).copy(newPath);
+    }
+    if (favorites.contains(currentPathString)) {
+      favorites.remove(currentPathString);
+      favorites.add(newPath);
+    }
+  }
+  writeFavorites(favorites);
+  selectedFiles.clear();
+  filesToMoveCopy.clear();
+  copyMode = false;
+  moveMode = false;
+  filesLoaded = false;
+  files.clear();
+}
+
+void moveFiles() async {
+  List<String> favorites = await loadFavorites();
+  String currentPathString = currentPath.join('/');
+  for (int i = 0; i < filesToMoveCopy.length; i++) {
+    final newPath =
+        currentPathString + "/" + filesToMoveCopy[i].path.split('/').last;
+    if (filesToMoveCopy[i].statSync().type == FileSystemEntityType.directory) {
+      copyPath(filesToMoveCopy[i].path, newPath);
+    } else {
+      File(filesToMoveCopy[i].path).copySync(newPath);
+    }
+    filesToMoveCopy[i].delete(recursive: true);
+    print("SALUT: " + filesToMoveCopy[i].path);
+    if (favorites.contains(currentPathString)) {
+      favorites.remove(currentPathString);
+      favorites.add(newPath);
+    }
+  }
+  writeFavorites(favorites);
+  selectedFiles.clear();
+  filesToMoveCopy.clear();
+  copyMode = false;
+  moveMode = false;
+  filesLoaded = false;
+  files.clear();
+}
+
+void triggerCopy(BuildContext context) {
+  copyMode = true;
+  filesToMoveCopy.clear();
+  for (int i = 0; i < selectedFiles.length; i++) {
+    filesToMoveCopy.add(files[selectedFiles[i]]);
+  }
+  selectedFiles.clear();
+}
+
+void triggerMove(BuildContext context) {
+  moveMode = true;
+  filesToMoveCopy.clear();
+  for (int i = 0; i < selectedFiles.length; i++) {
+    filesToMoveCopy.add(files[selectedFiles[i]]);
+  }
+  selectedFiles.clear();
 }
 
 class FileList extends StatefulWidget {
@@ -223,12 +307,19 @@ class _FileListState extends State<FileList> {
           children: [Expanded(child: childToReturn), DownBar(size: size)],
         );
       } else {
-        return const Center(
-          child: Text(
-            'No files found',
-            style: TextStyle(
-                fontSize: 40, color: Colors.black, fontFamily: "Gilroy"),
-          ),
+        return Column(
+          children: [
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'No files found',
+                  style: TextStyle(
+                      fontSize: 40, color: Colors.black, fontFamily: "Gilroy"),
+                ),
+              ),
+            ),
+            DownBar(size: size)
+          ],
         );
       }
     }
@@ -239,7 +330,11 @@ class _FileListState extends State<FileList> {
     selectedFiles.clear();
     currentPath.clear();
     files.clear();
+    filesToMoveCopy.clear();
+    copyMode = false;
+    moveMode = false;
     filesLoaded = false;
+
     super.initState();
     timer =
         Timer.periodic(const Duration(milliseconds: 500), (Timer timer) async {
@@ -260,21 +355,29 @@ class _FileListState extends State<FileList> {
   void dispose() {
     super.dispose();
     timer.cancel();
+    filesToMoveCopy.clear();
+    currentPath.clear();
   }
 
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
-    return Material(
-        child: SafeArea(
-            child: Column(
-      children: <Widget>[
-        Align(
-            alignment: Alignment.topLeft,
-            child: UpBar(context, updateFiles, saveFavorites)),
-        Expanded(child: getFileBody(size))
-      ],
-    )));
+    return WillPopScope(
+      onWillPop: () {
+        goBack(context, updateFiles);
+        return Future.value(false);
+      },
+      child: Material(
+          child: SafeArea(
+              child: Column(
+        children: <Widget>[
+          Align(
+              alignment: Alignment.topLeft,
+              child: UpBar(context, updateFiles, saveFavorites)),
+          Expanded(child: getFileBody(size))
+        ],
+      ))),
+    );
   }
 }
 
@@ -286,32 +389,81 @@ class DownBar extends StatelessWidget {
 
   final Size size;
 
-  @override
-  Widget build(BuildContext context) {
-    return Visibility(
-      visible: selectedFiles.isNotEmpty,
-      child: Container(
+  void cancelOperation() {
+    copyMode = false;
+    moveMode = false;
+    filesToMoveCopy.clear();
+  }
+
+  Row getDownButtons() {
+    if (!copyMode && !moveMode) {
+      return Row(
+        children: [
+          DownButton(callback: triggerMove, size: size, text: "move"),
+          DownButton(callback: triggerCopy, size: size, text: "copy"),
+          DownButton(callback: deleteFiles, size: size, text: "delete"),
+          if (selectedFiles.length == 1)
+            DownButton(callback: renameFile, size: size, text: "rename"),
+          if (selectedFiles.length == 1 &&
+              files[selectedFiles[0]].path.split('/').last.endsWith(".txt"))
+            DownButton(callback: null, size: size, text: "edit")
+        ],
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      );
+    } else {
+      return Row(
+        children: [
+          Text("${filesToMoveCopy.length} selected",
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: "Gilroy",
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14)),
+          TextButton(
+              onPressed: () {
+                cancelOperation();
+              },
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: "Gilroy",
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14),
+              )),
+          TextButton(
+              onPressed: copyMode ? copyFiles : moveFiles,
+              child: Text(
+                copyMode ? "Copy here" : "Move here",
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: "Gilroy",
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14),
+              ))
+        ],
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      );
+    }
+  }
+
+  Widget getDownBarWidget() {
+    return Container(
         height: size.height * 0.07,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         // margin: const EdgeInsets.only(top: 10),
         decoration: const BoxDecoration(
           color: Color.fromARGB(255, 0, 0, 26),
         ),
-        child: Row(
-          children: [
-            DownButton(callback: null, size: size, text: "move"),
-            DownButton(callback: null, size: size, text: "copy"),
-            DownButton(callback: deleteFiles, size: size, text: "delete"),
-            if (selectedFiles.length == 1)
-              DownButton(callback: renameFile, size: size, text: "rename"),
-            if (selectedFiles.length == 1 &&
-                files[selectedFiles[0]].path.split('/').last.endsWith(".txt"))
-              DownButton(callback: null, size: size, text: "edit")
-          ],
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        ),
-      ),
-    );
+        child: getDownButtons());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Visibility(
+        visible: selectedFiles.isNotEmpty || filesToMoveCopy.isNotEmpty,
+        child: getDownBarWidget());
   }
 }
 
@@ -422,15 +574,6 @@ class _UpBarState extends State<UpBar> {
     return path;
   }
 
-  void goBack(BuildContext context) {
-    if (currentPath.length == 1) {
-      Navigator.pop(context);
-    } else {
-      currentPath.removeLast();
-      widget.callback();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
@@ -460,7 +603,7 @@ class _UpBarState extends State<UpBar> {
                       icon: const Icon(Icons.arrow_back_rounded,
                           color: Colors.white),
                       onPressed: () {
-                        goBack(context);
+                        goBack(context, widget.callback);
                       },
                     )),
                 Visibility(
