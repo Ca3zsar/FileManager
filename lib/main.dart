@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'Screens/EditScreen/edit_screen.dart';
 import 'Screens/FileScreen/files_list.dart';
 import 'Screens/StartScreen/start_screen.dart';
 
@@ -18,6 +19,7 @@ class MainApplication extends StatelessWidget {
           '/': (context) =>
               const SafeArea(child: HomePage(title: 'File Manager')),
           '/filelist': (context) => const SafeArea(child: FileList()),
+          '/edit': (context) => const SafeArea(child: EditArea())
         },
         title: 'File Manager');
   }

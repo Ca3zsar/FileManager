@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:io/io.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:tppm/styles/text_styles.dart';
 import 'package:tppm/utils/favorites_manager.dart';
+
+import 'utils/paths.dart';
 
 List<int> selectedFiles = [];
 List<String> currentPath = [];
@@ -15,6 +17,14 @@ bool filesLoaded = false;
 bool notFinishedLoading = false;
 bool copyMode = false;
 bool moveMode = false;
+
+void changeToEdit(BuildContext context) {
+  Navigator.pushNamed(
+    context,
+    '/edit',
+    arguments: files[selectedFiles[0]].path,
+  );
+}
 
 void goBack(BuildContext context, Function callback) {
   if (currentPath.length == 1) {
@@ -41,11 +51,7 @@ void deleteFiles(BuildContext context) async {
                 onPressed: () {
                   Navigator.of(context).pop(false);
                 },
-                child: const Text("Cancel",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: "Gilroy")),
+                child: const Text("Cancel", style: DialogStyle()),
               ),
               TextButton(
                   onPressed: () {
@@ -53,10 +59,7 @@ void deleteFiles(BuildContext context) async {
                   },
                   child: const Text(
                     "Confirm",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: "Gilroy"),
+                    style: DialogStyle(),
                   ))
             ],
           ),
@@ -105,11 +108,7 @@ void renameFile(BuildContext context) async {
                 onPressed: () {
                   Navigator.of(context).pop("");
                 },
-                child: const Text("Cancel",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: "Gilroy")),
+                child: const Text("Cancel", style: DialogStyle()),
               ),
               TextButton(
                   onPressed: () {
@@ -117,10 +116,7 @@ void renameFile(BuildContext context) async {
                   },
                   child: const Text(
                     "Rename",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: "Gilroy"),
+                    style: DialogStyle(),
                   ))
             ],
           ),
@@ -133,15 +129,30 @@ void renameFile(BuildContext context) async {
   if (newName != "") {
     final favorites = await loadFavorites();
     String oldPath = files[selectedFiles[0]].path;
+    String newPath = files[selectedFiles[0]].parent.path + "/" + newName;
+    bool toDelete = false;
+    if (files.any((element) => element.path == newPath)) {
+      showDialog(
+          context: context,
+          builder: (context) {
+            return const AlertDialog(
+              backgroundColor: Color.fromARGB(255, 0, 0, 26),
+              content: Text("There is already a file/directory with this name",
+                  style: DialogStyle()),
+            );
+          });
+    } else {
+      files[selectedFiles[0]].renameSync(newPath);
+      files[selectedFiles[0]] = File(newPath);
+      if (toDelete) {
+        files.removeWhere((element) => element.path == newPath);
+      }
 
-    files[selectedFiles[0]]
-        .renameSync(files[selectedFiles[0]].parent.path + "/" + newName);
-    files[selectedFiles[0]] =
-        File(files[selectedFiles[0]].parent.path + "/" + newName);
-    if (favorites.contains(oldPath)) {
-      favorites.remove(oldPath);
-      favorites.add(files[selectedFiles[0]].path);
-      writeFavorites(favorites);
+      if (favorites.contains(oldPath)) {
+        favorites.remove(oldPath);
+        favorites.add(files[selectedFiles[0]].path);
+        writeFavorites(favorites);
+      }
     }
   }
 }
@@ -170,11 +181,7 @@ void createTxtFile(BuildContext context, Function callback) async {
                 onPressed: () {
                   Navigator.of(context).pop("");
                 },
-                child: const Text("Cancel",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: "Gilroy")),
+                child: const Text("Cancel", style: DialogStyle()),
               ),
               TextButton(
                   onPressed: () {
@@ -182,10 +189,7 @@ void createTxtFile(BuildContext context, Function callback) async {
                   },
                   child: const Text(
                     "Create",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: "Gilroy"),
+                    style: DialogStyle(),
                   ))
             ],
           ),
@@ -227,11 +231,7 @@ void createDirectory(BuildContext context, Function callback) async {
                 onPressed: () {
                   Navigator.of(context).pop("");
                 },
-                child: const Text("Cancel",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: "Gilroy")),
+                child: const Text("Cancel", style: DialogStyle()),
               ),
               TextButton(
                   onPressed: () {
@@ -239,10 +239,7 @@ void createDirectory(BuildContext context, Function callback) async {
                   },
                   child: const Text(
                     "Create",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontFamily: "Gilroy"),
+                    style: DialogStyle(),
                   ))
             ],
           ),
@@ -346,22 +343,6 @@ class _FileListState extends State<FileList> {
     addNewFavorites(favorites);
   }
 
-  Future<Directory> getExternalSdCardPath() async {
-    List<Directory>? extDirectories = await getExternalStorageDirectories();
-    List<String>? dirs = extDirectories![1].toString().split('/');
-
-    String rebuiltPath = '/' + dirs[1] + '/' + dirs[2] + '/';
-
-    return Directory(rebuiltPath);
-  }
-
-  Future<Directory> getInternalStoragePath() async {
-    final directory = await getExternalStorageDirectory();
-    List<String>? dirs = directory?.path.split('/');
-    String rebuiltPath = '/' + dirs![1] + '/' + dirs[2] + '/' + dirs[3];
-    return Directory(rebuiltPath);
-  }
-
   ListTile generateFileTile(int index) {
     final icon = files[index].statSync().type == FileSystemEntityType.directory
         ? Image.asset('assets/images/folder.png')
@@ -408,19 +389,6 @@ class _FileListState extends State<FileList> {
     );
   }
 
-  void getInitialPath() async {
-    Future<Directory> Function() function;
-    if (currentPath.isEmpty) {
-      if (type == 'Internal') {
-        function = getInternalStoragePath;
-      } else {
-        function = getExternalSdCardPath;
-      }
-      final newPathPart = await function();
-      currentPath.add(newPathPart.path);
-    }
-  }
-
   void addToPath(String newPath) {
     currentPath.add(newPath);
     files.clear();
@@ -430,23 +398,22 @@ class _FileListState extends State<FileList> {
 
   void updateFiles() {
     if (currentPath.isEmpty) {
-      getInitialPath();
+      getInitialPath(currentPath, type);
     } else {
       try {
         final path = currentPath.join('/');
         files = Directory(path).listSync();
-        files
-          ..sort((a, b) {
-            if (a.statSync().type == FileSystemEntityType.directory &&
-                b.statSync().type == FileSystemEntityType.file) {
-              return -1;
-            } else if (a.statSync().type == FileSystemEntityType.file &&
-                b.statSync().type == FileSystemEntityType.directory) {
-              return 1;
-            } else {
-              return a.path.compareTo(b.path);
-            }
-          });
+        files.sort((a, b) {
+          if (a.statSync().type == FileSystemEntityType.directory &&
+              b.statSync().type == FileSystemEntityType.file) {
+            return -1;
+          } else if (a.statSync().type == FileSystemEntityType.file &&
+              b.statSync().type == FileSystemEntityType.directory) {
+            return 1;
+          } else {
+            return a.path.compareTo(b.path);
+          }
+        });
         filesLoaded = true;
       } catch (e) {
         filesLoaded = true;
@@ -560,7 +527,7 @@ class DownBar extends StatelessWidget {
     filesToMoveCopy.clear();
   }
 
-  Row getDownButtons() {
+  Row getDownButtons(BuildContext context) {
     if (!copyMode && !moveMode) {
       return Row(
         children: [
@@ -571,7 +538,7 @@ class DownBar extends StatelessWidget {
             DownButton(callback: renameFile, size: size, text: "rename"),
           if (selectedFiles.length == 1 &&
               files[selectedFiles[0]].path.split('/').last.endsWith(".txt"))
-            DownButton(callback: null, size: size, text: "edit")
+            DownButton(callback: changeToEdit, size: size, text: "edit")
         ],
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       );
@@ -613,7 +580,7 @@ class DownBar extends StatelessWidget {
     }
   }
 
-  Widget getDownBarWidget() {
+  Widget getDownBarWidget(BuildContext context) {
     return Container(
         height: size.height * 0.07,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -621,14 +588,14 @@ class DownBar extends StatelessWidget {
         decoration: const BoxDecoration(
           color: Color.fromARGB(255, 0, 0, 26),
         ),
-        child: getDownButtons());
+        child: getDownButtons(context));
   }
 
   @override
   Widget build(BuildContext context) {
     return Visibility(
         visible: selectedFiles.isNotEmpty || filesToMoveCopy.isNotEmpty,
-        child: getDownBarWidget());
+        child: getDownBarWidget(context));
   }
 }
 

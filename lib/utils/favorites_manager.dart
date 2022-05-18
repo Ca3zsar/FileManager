@@ -34,6 +34,5 @@ Future<void> writeFavorites(List<String> newFavorites) async {
 
   favoritesList.addAll(newFavorites);
   final favoritesString = favoritesList.join(',');
-  print("String: " + favoritesString);
   await file.writeAsString(favoritesString);
 }
