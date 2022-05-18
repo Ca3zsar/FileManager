@@ -13,7 +13,7 @@ List<FileSystemEntity> files = [];
 bool filesLoaded = false;
 bool notFinishedLoading = false;
 
-void deleteFiles() async {
+void deleteFiles(BuildContext context) async {
   List<String> favorites = await loadFavorites();
   for (int i = 0; i < selectedFiles.length; i++) {
     if (favorites.contains(files[selectedFiles[i]].path)) {
@@ -24,6 +24,72 @@ void deleteFiles() async {
   }
   writeFavorites(favorites);
   selectedFiles.clear();
+}
+
+void renameFile(BuildContext context) async {
+  final textField = TextEditingController();
+  textField.text = files[selectedFiles[0]].path.split('/').last;
+  final newName = await showDialog(
+      context: context,
+      builder: (context) {
+        return WillPopScope(
+          child: AlertDialog(
+            backgroundColor: const Color.fromARGB(255, 0, 0, 26),
+            title: const Text('Rename file',
+                style: TextStyle(
+                    color: Colors.white, fontSize: 20, fontFamily: "Gilroy")),
+            content: TextField(
+                controller: textField,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'New name',
+                ),
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 18, fontFamily: "Gilroy")),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop("");
+                },
+                child: const Text("Cancel",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: "Gilroy")),
+              ),
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(textField.text);
+                  },
+                  child: const Text(
+                    "Rename",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: "Gilroy"),
+                  ))
+            ],
+          ),
+          onWillPop: () {
+            Navigator.of(context).pop("");
+            return Future.value(false);
+          },
+        );
+      });
+  if (newName != "") {
+    final favorites = await loadFavorites();
+    String oldPath = files[selectedFiles[0]].path;
+
+    files[selectedFiles[0]]
+        .renameSync(files[selectedFiles[0]].parent.path + "/" + newName);
+    files[selectedFiles[0]] =
+        File(files[selectedFiles[0]].parent.path + "/" + newName);
+    if (favorites.contains(oldPath)) {
+      favorites.remove(oldPath);
+      favorites.add(files[selectedFiles[0]].path);
+      writeFavorites(favorites);
+    }
+  }
 }
 
 class FileList extends StatefulWidget {
@@ -237,7 +303,7 @@ class DownBar extends StatelessWidget {
             DownButton(callback: null, size: size, text: "copy"),
             DownButton(callback: deleteFiles, size: size, text: "delete"),
             if (selectedFiles.length == 1)
-              DownButton(callback: null, size: size, text: "rename"),
+              DownButton(callback: renameFile, size: size, text: "rename"),
             if (selectedFiles.length == 1 &&
                 files[selectedFiles[0]].path.split('/').last.endsWith(".txt"))
               DownButton(callback: null, size: size, text: "edit")
@@ -267,7 +333,7 @@ class DownButton extends StatelessWidget {
           shadowColor: Colors.transparent,
           padding: const EdgeInsets.only(top: 6)),
       onPressed: () {
-        callback!();
+        callback!(context);
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
