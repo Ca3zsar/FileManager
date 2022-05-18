@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:tppm/utils/favorites_manager.dart';
 
@@ -133,9 +134,14 @@ class FavoriteItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final type = path.split('/')[2] == 'emulated' ? "Internal" : "SD Card";
     return Card(
         child: ListTile(
-      onTap: () {},
+      onTap: () {
+        if (File(path).statSync().type == FileSystemEntityType.directory) {
+          Navigator.pushNamed(context, '/filelist', arguments: [type, path]);
+        }
+      },
       // minVerticalPadding: 1,
       dense: true,
       visualDensity: VisualDensity.compact,

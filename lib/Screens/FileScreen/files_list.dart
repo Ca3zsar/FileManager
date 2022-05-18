@@ -31,6 +31,7 @@ void changeToEdit(BuildContext context) {
 }
 
 void goBack(BuildContext context, Function callback) {
+  print(currentPath);
   if (currentPath.length == 1) {
     Navigator.pop(context);
   } else {
@@ -218,6 +219,8 @@ class FileList extends StatefulWidget {
 
 class _FileListState extends State<FileList> {
   String type = '';
+  String path = '';
+  bool pathLoaded = false;
   late Timer timer;
   bool isLoading = true;
 
@@ -349,18 +352,29 @@ class _FileListState extends State<FileList> {
     copyMode = false;
     moveMode = false;
     filesLoaded = false;
-
+    pathLoaded = false;
     super.initState();
     timer =
         Timer.periodic(const Duration(milliseconds: 500), (Timer timer) async {
       setState(() {
-        if (files.isEmpty && !filesLoaded) {
-          type = ModalRoute.of(context)!.settings.arguments as String;
-          updateFiles();
-        }
+        final args = ModalRoute.of(context)!.settings.arguments as List<String>;
+        type = args[0];
+        if (!pathLoaded) path = args[1];
+        pathLoaded = true;
+        if (path == '') {
+          if (files.isEmpty && !filesLoaded) {
+            updateFiles();
+          }
 
-        if (files.isNotEmpty || filesLoaded) {
-          isLoading = false;
+          if (files.isNotEmpty || filesLoaded) {
+            isLoading = false;
+          }
+        } else {
+          int startPoint = type == "Internal" ? 4 : 3;
+          currentPath = [path.split('/').sublist(0, startPoint).join('/')]
+            ..addAll(path.split('/').sublist(startPoint));
+          updateFiles();
+          path = '';
         }
       });
     });
@@ -537,7 +551,8 @@ class _UpBarState extends State<UpBar> {
 
   List<Widget> _createPath() {
     final Size size = MediaQuery.of(context).size;
-    final type = ModalRoute.of(context)!.settings.arguments as String;
+    final args = ModalRoute.of(context)!.settings.arguments as List<String>;
+    final type = args[0];
     List<Widget> path = [
       Padding(
         padding: const EdgeInsets.only(left: 12),
@@ -679,7 +694,7 @@ class _UpBarState extends State<UpBar> {
                           shadowColor: Colors.transparent,
                           padding: const EdgeInsets.only(top: 6)),
                       onPressed: () {
-                        widget.saveFavorites(context);
+                        widget.saveFavorites();
                       },
                       child: const Icon(
                         Icons.favorite_border_outlined,

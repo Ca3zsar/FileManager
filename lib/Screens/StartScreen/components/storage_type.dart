@@ -29,7 +29,7 @@ class StorageTypeWidget extends StatelessWidget {
       ),
       child: ListTile(
         onTap: () {
-          Navigator.pushNamed(context, '/filelist', arguments: type);
+          Navigator.pushNamed(context, '/filelist', arguments: [type, ""]);
         },
         title: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
