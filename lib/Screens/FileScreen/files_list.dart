@@ -3,9 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:io/io.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:tppm/Screens/FileScreen/fileCreateDialog.dart';
+import 'package:tppm/Screens/FileScreen/renameDialog.dart';
 import 'package:tppm/styles/text_styles.dart';
 import 'package:tppm/utils/favorites_manager.dart';
 
+import 'deleteDialog.dart';
+import 'errorDialog.dart';
 import 'utils/paths.dart';
 
 List<int> selectedFiles = [];
@@ -37,38 +41,7 @@ void goBack(BuildContext context, Function callback) {
 }
 
 void deleteFiles(BuildContext context) async {
-  final confirmation = await showDialog(
-      context: context,
-      builder: (context) {
-        return WillPopScope(
-          child: AlertDialog(
-            backgroundColor: const Color.fromARGB(255, 0, 0, 26),
-            title: const Text('Delete file(s) ?',
-                style: TextStyle(
-                    color: Colors.white, fontSize: 20, fontFamily: "Gilroy")),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(false);
-                },
-                child: const Text("Cancel", style: DialogStyle()),
-              ),
-              TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(true);
-                  },
-                  child: const Text(
-                    "Confirm",
-                    style: DialogStyle(),
-                  ))
-            ],
-          ),
-          onWillPop: () {
-            Navigator.of(context).pop(false);
-            return Future.value(false);
-          },
-        );
-      });
+  final confirmation = await DeleteDialog(context);
   if (confirmation) {
     List<String> favorites = await loadFavorites();
     for (int i = 0; i < selectedFiles.length; i++) {
@@ -86,67 +59,16 @@ void deleteFiles(BuildContext context) async {
 void renameFile(BuildContext context) async {
   final textField = TextEditingController();
   textField.text = files[selectedFiles[0]].path.split('/').last;
-  final newName = await showDialog(
-      context: context,
-      builder: (context) {
-        return WillPopScope(
-          child: AlertDialog(
-            backgroundColor: const Color.fromARGB(255, 0, 0, 26),
-            title: const Text('Rename file',
-                style: TextStyle(
-                    color: Colors.white, fontSize: 20, fontFamily: "Gilroy")),
-            content: TextField(
-                controller: textField,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'New name',
-                ),
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 18, fontFamily: "Gilroy")),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop("");
-                },
-                child: const Text("Cancel", style: DialogStyle()),
-              ),
-              TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(textField.text);
-                  },
-                  child: const Text(
-                    "Rename",
-                    style: DialogStyle(),
-                  ))
-            ],
-          ),
-          onWillPop: () {
-            Navigator.of(context).pop("");
-            return Future.value(false);
-          },
-        );
-      });
+  final newName = await RenameDialog(context, textField);
   if (newName != "") {
     final favorites = await loadFavorites();
     String oldPath = files[selectedFiles[0]].path;
     String newPath = files[selectedFiles[0]].parent.path + "/" + newName;
-    bool toDelete = false;
     if (files.any((element) => element.path == newPath)) {
-      showDialog(
-          context: context,
-          builder: (context) {
-            return const AlertDialog(
-              backgroundColor: Color.fromARGB(255, 0, 0, 26),
-              content: Text("There is already a file/directory with this name",
-                  style: DialogStyle()),
-            );
-          });
+      ErrorDialog(context, "There is already a file/directory with this name");
     } else {
       files[selectedFiles[0]].renameSync(newPath);
       files[selectedFiles[0]] = File(newPath);
-      if (toDelete) {
-        files.removeWhere((element) => element.path == newPath);
-      }
 
       if (favorites.contains(oldPath)) {
         favorites.remove(oldPath);
@@ -159,46 +81,7 @@ void renameFile(BuildContext context) async {
 
 void createTxtFile(BuildContext context, Function callback) async {
   final textField = TextEditingController();
-  final fileName = await showDialog(
-      context: context,
-      builder: (context) {
-        return WillPopScope(
-          child: AlertDialog(
-            backgroundColor: const Color.fromARGB(255, 0, 0, 26),
-            title: const Text('Create file',
-                style: TextStyle(
-                    color: Colors.white, fontSize: 20, fontFamily: "Gilroy")),
-            content: TextField(
-                controller: textField,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'File name',
-                ),
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 18, fontFamily: "Gilroy")),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop("");
-                },
-                child: const Text("Cancel", style: DialogStyle()),
-              ),
-              TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(textField.text);
-                  },
-                  child: const Text(
-                    "Create",
-                    style: DialogStyle(),
-                  ))
-            ],
-          ),
-          onWillPop: () {
-            Navigator.of(context).pop("");
-            return Future.value(false);
-          },
-        );
-      });
+  final fileName = await FileCreateDialog(context, textField);
   if (fileName != '') {
     final file = File(currentPath.join('/') + "/" + fileName + ".txt");
     file.createSync();

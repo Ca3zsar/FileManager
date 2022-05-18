@@ -85,28 +85,34 @@ class _EditAreaState extends State<EditArea> {
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final Size size = MediaQuery.of(context).size;
-    return Material(
-        child: SafeArea(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-          Align(alignment: Alignment.topLeft, child: UpBar(context)),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(bottom: bottom),
-              scrollDirection: Axis.vertical,
-              child: SizedBox(
-                width: size.width * 0.9,
-                child: TextField(
-                  controller: _controller,
-                  keyboardType: TextInputType.multiline,
-                  maxLines: null, //grow automatically
-                  decoration: InputDecoration(border: InputBorder.none),
+    return WillPopScope(
+      child: Material(
+          child: SafeArea(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+            Align(alignment: Alignment.topLeft, child: UpBar(context)),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(bottom: bottom),
+                scrollDirection: Axis.vertical,
+                child: SizedBox(
+                  width: size.width * 0.9,
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.multiline,
+                    maxLines: null, //grow automatically
+                    decoration: InputDecoration(border: InputBorder.none),
+                  ),
                 ),
               ),
-            ),
-          )
-        ])));
+            )
+          ]))),
+      onWillPop: () {
+        askForPermission(context);
+        return Future<bool>.value(false);
+      },
+    );
   }
 }
 
