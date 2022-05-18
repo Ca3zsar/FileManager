@@ -172,15 +172,18 @@ void moveFiles() async {
   for (int i = 0; i < filesToMoveCopy.length; i++) {
     final newPath =
         currentPathString + "/" + filesToMoveCopy[i].path.split('/').last;
-    if (filesToMoveCopy[i].statSync().type == FileSystemEntityType.directory) {
-      copyPath(filesToMoveCopy[i].path, newPath);
-    } else {
-      File(filesToMoveCopy[i].path).copySync(newPath);
-    }
-    filesToMoveCopy[i].delete(recursive: true);
-    if (favorites.contains(currentPathString)) {
-      favorites.remove(currentPathString);
-      favorites.add(newPath);
+    if (newPath != filesToMoveCopy[i].path) {
+      if (filesToMoveCopy[i].statSync().type ==
+          FileSystemEntityType.directory) {
+        copyPath(filesToMoveCopy[i].path, newPath);
+      } else {
+        File(filesToMoveCopy[i].path).copySync(newPath);
+      }
+      filesToMoveCopy[i].delete(recursive: true);
+      if (favorites.contains(currentPathString)) {
+        favorites.remove(currentPathString);
+        favorites.add(newPath);
+      }
     }
   }
   writeFavorites(favorites);
